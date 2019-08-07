@@ -1,11 +1,12 @@
 """Provides a shell class for interactivly using Attiucs from the command line."""
 
+import atexit
 import cmd
 import glob
 import os
 from typing import List
 
-from .core import mb_processes, load, start, status, stop, stop_all, unload
+from .core import Atticus
 from .errors import AtticusError
 
 
@@ -19,6 +20,48 @@ class Shell(cmd.Cmd):
     prompt = 'atticus> '
     intro = ("Welcome to Atticus. Type help or ? to list commands.")
 
+    def __init__(self, *args) -> None:
+        """Overrides Cmd constructor to construct an instance of Atticus."""
+
+        self.atticus = Atticus()
+        atexit.register(self.do_exit, None)
+        super().__init__(*args)
+
+    @staticmethod
+    def autocomplete_path(line: str, begidx: int, endidx: int) -> List[str]:
+        """Autocomplete file path.
+
+        Created with help from the Stack Overflow answer https://stackoverflow.com/a/27256663
+        Answer by meffie
+        """
+
+        before_arg = line.rfind(" ", 0, begidx)
+        if before_arg == -1:
+            return []
+
+        fixed = line[before_arg+1:begidx]
+        arg = line[before_arg+1:endidx]
+        pattern = arg + '*'
+
+        completions = []
+        for path in glob.glob(pattern):
+            path = Shell.append_slash_if_dir(path)
+            completions.append(path.replace(fixed, "", 1))
+        return completions
+
+    @staticmethod
+    def append_slash_if_dir(path: str) -> str:
+        """Append a slash to path name if the path is a directory
+
+        Created with help from the Stack Overflow answer https://stackoverflow.com/a/27256663
+        Answer by meffie
+        """
+
+        if path and os.path.isdir(path) and path[-1] != os.sep:
+            return path + os.sep
+
+        return path
+
     def emptyline(self) -> None:
         pass
 
@@ -29,21 +72,21 @@ class Shell(cmd.Cmd):
         """Load a mockingbird configuration from a YAML file."""
 
         try:
-            mb_name = load(arg)
+            mb_name = self.atticus.load(arg)
             print('Loaded', mb_name, 'from', arg)
         except AtticusError as ex:
             print(ex)
 
-    def complete_load(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_load(self, _: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Autocomplete line with file paths for load command."""
 
-        return self.autocomplete_path(text, line, begidx, endidx)
+        return self.autocomplete_path(line, begidx, endidx)
 
     def do_unload(self, arg: str) -> None:
         """Unload a mockingbird configuration."""
 
         try:
-            unload(arg)
+            self.atticus.unload(arg)
             print(arg, 'unloaded')
         except AtticusError as ex:
             print(ex)
@@ -58,9 +101,9 @@ class Shell(cmd.Cmd):
 
         try:
             if arg:
-                print(status(*arg.split()))
+                print(self.atticus.status(*arg.split()))
             else:
-                print(status())
+                print(self.atticus.status())
         except AtticusError as ex:
             print(ex)
 
@@ -73,7 +116,7 @@ class Shell(cmd.Cmd):
         """Start the specified mockingbird config."""
 
         try:
-            start(arg)
+            self.atticus.start(arg)
             print(arg, 'is now running')
         except AtticusError as ex:
             print(ex)
@@ -87,7 +130,7 @@ class Shell(cmd.Cmd):
         """Stop the specified mockingbird config."""
 
         try:
-            stop(arg)
+            self.atticus.stop(arg)
             print(arg, 'is now stopped')
         except AtticusError as ex:
             print(ex)
@@ -100,41 +143,10 @@ class Shell(cmd.Cmd):
     def do_exit(self, _: str) -> bool:
         """Exit the atticus shell."""
 
-        stop_all()
+        self.atticus.stop_all()
         print("Goodbye!")
         return True
 
     def autocomplete_mb(self, text: str) -> List[str]:
         """ Returns """
-        return [mb_name for mb_name in mb_processes if mb_name.startswith(text)]
-
-    def autocomplete_path(self, _: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Autocomplete file path.
-
-        Created with help from the Stack Overflow answer https://stackoverflow.com/a/27256663
-        Answer by meffie
-        """
-        before_arg = line.rfind(" ", 0, begidx)
-        if before_arg == -1:
-            return []
-
-        fixed = line[before_arg+1:begidx]
-        arg = line[before_arg+1:endidx]
-        pattern = arg + '*'
-
-        completions = []
-        for path in glob.glob(pattern):
-            path = self.append_slash_if_dir(path)
-            completions.append(path.replace(fixed, "", 1))
-        return completions
-
-    def append_slash_if_dir(self, path: str) -> str:
-        """Append a slash to path name if the path is a directory
-
-        Created with help from the Stack Overflow answer https://stackoverflow.com/a/27256663
-        Answer by meffie
-        """
-        if path and os.path.isdir(path) and path[-1] != os.sep:
-            return path + os.sep
-
-        return path
+        return [mb_name for mb_name in self.atticus._mb_processes if mb_name.startswith(text)]

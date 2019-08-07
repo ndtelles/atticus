@@ -10,6 +10,8 @@ from .mock import mock
 class MockingbirdProcess:
     """Class for controlling the child mockingbird processes created by atticus"""
 
+    JOIN_TIMEOUT = 5
+
     class Status(Enum):
         """Enum class representing the status of the mockingbird process."""
 
@@ -36,6 +38,7 @@ class MockingbirdProcess:
         """ Stop the process """
 
         self.stop_event.value = 1
-        # ToDo: Set timeout for failing to join
-        self.process.join()
-        self.status = MockingbirdProcess.Status.STOPPED
+        self.process.join(MockingbirdProcess.JOIN_TIMEOUT)
+
+        if not self.process.is_alive():
+            self.status = MockingbirdProcess.Status.STOPPED
