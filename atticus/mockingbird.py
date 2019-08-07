@@ -3,7 +3,7 @@
 from typing import Dict
 
 
-class MockingBird:
+class Mockingbird:
     """Class that holds the API for simulating the device."""
 
     TERMINATORS = {
@@ -36,7 +36,7 @@ class MockingBird:
         if self.terminator == 'none':
             reqs = [reqs_str]
         else:
-            reqs = reqs_str.split(MockingBird.TERMINATORS[self.terminator])
+            reqs = reqs_str.split(Mockingbird.TERMINATORS[self.terminator])
 
         data = ''
         for req in filter(None, reqs):
@@ -45,4 +45,4 @@ class MockingBird:
             data = self.requests.get(req, '')
 
         # Currently will only respond to last request!
-        return data + MockingBird.TERMINATORS[self.terminator]
+        return data + Mockingbird.TERMINATORS[self.terminator]

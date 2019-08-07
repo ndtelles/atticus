@@ -1,0 +1,11 @@
+name: test_device
+interface:
+  tcp:
+    address: 127.0.0.1
+    port: 42826
+properties:
+  case_sensitive : no
+  terminator: CRLF
+requests:
+  'units?': 'micron'
+  'units torr' : ''
