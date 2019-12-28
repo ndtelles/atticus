@@ -2,12 +2,12 @@
 
 from copy import deepcopy
 from multiprocessing import Value
-from threading import Event, Thread
-from time import sleep
 from typing import Dict
 
+from .errors import BufferMissingError
+from .interfaces.beak import Beak
+from .interfaces.tcp_server import TCPServer
 from .mockingbird import Mockingbird
-from .tcp_server import TCPServer
 
 
 def mock(stop: Value, config: Dict) -> None:
@@ -17,15 +17,26 @@ def mock(stop: Value, config: Dict) -> None:
         mockingbird = Mockingbird(requests=deepcopy(
             config['requests']), props=deepcopy(config['properties']))
 
-        stop_event = Event()
-        interface = TCPServer(stop_event, deepcopy(
-            config['interface']['tcp']), mockingbird)
-        interface_thread = Thread(target=interface.start)
-        interface_thread.start()
+        interface = TCPServer(deepcopy(config['interface']['tcp']))
+        interface.start()
 
         while not stop.value:
-            sleep(0.05)
-            continue
+            # Increase CPU efficieny by waiting for input ready event.
+            # Timeout ensures stop.value gets checked.
+            Beak.input_ready.wait(0.1)
+
+            msg, respond = Beak.read_buffer()
+
+            response = ''
+            if msg is not None:
+                response = mockingbird.request(msg)
+
+            if respond is not None:
+                try:
+                    respond(response)
+                except BufferMissingError:
+                    print('Output buffer missing')
+    except (KeyboardInterrupt, SystemExit):
+        pass  # Prevent stack trace caused by keyboard interrupt
     finally:
-        stop_event.set()
-        interface_thread.join()
+        interface.stop()

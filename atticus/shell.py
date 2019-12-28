@@ -1,10 +1,9 @@
 """Provides a shell class for interactivly using Attiucs from the command line."""
 
-import atexit
 import cmd
 import glob
 import os
-from typing import List
+from typing import Any, List
 
 from .core import Atticus
 from .errors import AtticusError
@@ -20,11 +19,10 @@ class Shell(cmd.Cmd):
     prompt = 'atticus> '
     intro = ("Welcome to Atticus. Type help or ? to list commands.")
 
-    def __init__(self, *args) -> None:
+    def __init__(self, *args: Any) -> None:
         """Overrides Cmd constructor to construct an instance of Atticus."""
 
         self.atticus = Atticus()
-        atexit.register(self.do_exit, None)
         super().__init__(*args)
 
     @staticmethod
@@ -62,11 +60,12 @@ class Shell(cmd.Cmd):
 
         return path
 
-    def emptyline(self) -> None:
+    def emptyline(self) -> bool:
         pass
 
-    def default(self, line: str) -> None:
+    def default(self, line: str) -> bool:
         print('Unrecognized command:', line)
+        return False
 
     def do_load(self, arg: str) -> None:
         """Load a mockingbird configuration from a YAML file."""
@@ -148,5 +147,5 @@ class Shell(cmd.Cmd):
         return True
 
     def autocomplete_mb(self, text: str) -> List[str]:
-        """ Returns """
-        return [mb_name for mb_name in self.atticus._mb_processes if mb_name.startswith(text)]
+        """Returns all mockinbirds that have names that start with the given text."""
+        return [mb_name for mb_name in self.atticus.status() if mb_name.startswith(text)]

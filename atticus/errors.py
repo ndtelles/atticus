@@ -1,5 +1,6 @@
 """Define exceptions to be thown by atticus."""
 
+
 class AtticusError(Exception):
     """Base class for Atticus exceptions."""
 
@@ -54,3 +55,11 @@ class ConfigIOError(ConfigError):
 
 class InvalidConfig(ConfigError):
     """Exception class for when loading a config from a file fails."""
+
+
+class BeakError(AtticusError):
+    """Base class for beak interface errors"""
+
+
+class BufferMissingError(BeakError):
+    """Exception class for when a process attemps to operate on a non-existant output buffer."""

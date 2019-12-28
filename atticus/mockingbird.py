@@ -1,6 +1,6 @@
 """Defines the mockingbird class which handles requests."""
 
-from typing import Dict
+from typing import Dict, Optional
 
 
 class Mockingbird:
@@ -12,7 +12,7 @@ class Mockingbird:
         'none': ""
     }
 
-    def __init__(self, requests: Dict[str, str] = None, props: Dict[str, str] = None) -> None:
+    def __init__(self, requests: Optional[Dict[str, str]], props: Optional[Dict[str, str]]) -> None:
         """Construct the mocking bird by internalizing the provided configs and requests."""
 
         if props is None:
@@ -21,10 +21,10 @@ class Mockingbird:
         self.case_sensitive = props.get('case_sensitive', False)
         self.terminator = props.get('terminator', 'lf').lower()
 
-        self.requests = {}
+        self.requests: Dict[str, str] = {}
         self.register_requests(requests)
 
-    def register_requests(self, new_reqs: Dict[str, str]) -> None:
+    def register_requests(self, new_reqs: Optional[Dict[str, str]]) -> None:
         """Register a new set of request response pairs."""
 
         if new_reqs is not None:
@@ -33,6 +33,7 @@ class Mockingbird:
     def request(self, reqs_str: str) -> str:
         """Make request to the Mockingbird. Output the response."""
 
+        # @TODO: Check if this none check is necessary. If so, document why
         if self.terminator == 'none':
             reqs = [reqs_str]
         else:
