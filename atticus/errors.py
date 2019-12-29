@@ -60,11 +60,14 @@ class InvalidConfig(ConfigError):
 class BeakError(AtticusError):
     """Base class for beak interface errors."""
 
+
 class BuffersContainerError(AtticusError):
     """Base class for buffers container errors."""
 
+
 class BufferMissingError(BuffersContainerError):
     """Exception for when a process attemps to operate on a non-existant output buffer."""
+
 
 class BufferAlreadyExists(BuffersContainerError):
     """Exception for when a buffer already exists"""

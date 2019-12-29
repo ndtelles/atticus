@@ -11,7 +11,7 @@ class BuffersContainer:
     """Provides a thread-safe container of buffers that can be selected by key"""
 
     def __init__(self) -> None:
-        self._buffers: Dict[Any, Deque[str]] = {}
+        self._buffers = {} # type: Dict[Any, Deque[str]]
         self._lock = RLock()
 
         # Used to notify callers of buffers that have brand new data.
