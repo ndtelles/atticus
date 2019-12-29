@@ -14,8 +14,8 @@ class Beak(ABC):
 
     # All interfaces share input buffer so that the input (and thus output) is
     # handeled as close to FIFO as possible
-    __input_buffer: Deque[Tuple[str, Callable[[str], None]]] = deque(
-        maxlen=512)
+    __input_buffer = deque(
+        maxlen=512) # type: Deque[Tuple[str, Callable[[str], None]]]
     __input_buffer_lock = Lock()
     input_ready = Event()
 
