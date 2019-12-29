@@ -17,7 +17,7 @@ class BuffersContainer:
         # Used to notify callers of buffers that have brand new data.
         # Buffers are removed from the set when either a caller
         # acknowledges there is new data or the buffer becomes empty
-        self._new_data: Set[Any] = set()
+        self._new_data = set() # type: Set[Any]
 
     def create(self, buffer_key: Any) -> None:
         """Create a new buffer and store it in the buffer container.
