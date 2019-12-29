@@ -3,7 +3,7 @@
 import errno
 import selectors
 import socket
-from threading import Lock
+from typing import Any
 
 from .beak import Beak
 
@@ -15,12 +15,17 @@ class TCPServer(Beak):
     MAX_BIND_TRIES = 100
     SELECT_TIMEOUT = 0.001
 
-    def _start(self) -> None:
-        """Initialize the socket and selectors of the TCP server."""
-
-        self.lock = Lock()
+    def __init__(self, *args: Any) -> None:
+        super().__init__(*args)
         self.sel = selectors.DefaultSelector()
         self.server_sock = self._create_socket()
+
+    def __del__(self) -> None:
+        super().__del__()
+        self.sel.close()
+
+    def _start(self) -> None:
+        """Start the tcp server."""
 
         self._bind_socket(self._config['address'], self._config['port'])
         self.server_sock.listen(10)
@@ -49,7 +54,6 @@ class TCPServer(Beak):
 
         print("Stopping the TCP Server")
         self._close_socket()
-        self.sel.close()
 
     def _socket_io(self, conn: socket.socket, mask: int) -> None:
         """Evaluate the selector mask to decide between reading from and writing to the client."""

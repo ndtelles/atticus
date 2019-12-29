@@ -18,25 +18,23 @@ def mock(stop: Value, config: Dict) -> None:
             config['requests']), props=deepcopy(config['properties']))
 
         interface = TCPServer(deepcopy(config['interface']['tcp']))
-        interface.start()
 
-        while not stop.value:
-            # Increase CPU efficieny by waiting for input ready event.
-            # Timeout ensures stop.value gets checked.
-            Beak.input_ready.wait(0.1)
+        with interface:
+            while not stop.value:
+                # Increase CPU efficieny by waiting for input ready event.
+                # Timeout ensures stop.value gets checked.
+                Beak.input_ready.wait(0.1)
 
-            msg, respond = Beak.read_buffer()
+                msg, respond = Beak.read_buffer()
 
-            response = ''
-            if msg is not None:
-                response = mockingbird.request(msg)
+                response = ''
+                if msg is not None:
+                    response = mockingbird.request(msg)
 
-            if respond is not None:
-                try:
-                    respond(response)
-                except BufferMissingError:
-                    print('Output buffer missing')
+                if respond is not None:
+                    try:
+                        respond(response)
+                    except BufferMissingError:
+                        print('Output buffer missing')
     except (KeyboardInterrupt, SystemExit):
         pass  # Prevent stack trace caused by keyboard interrupt
-    finally:
-        interface.stop()

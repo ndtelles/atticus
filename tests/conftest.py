@@ -1,14 +1,9 @@
 """Configuration for pytest"""
-
-import threading
+import sys
 
 import pytest
 
-from atticus import mockingbird, config, mockingbird_process
-from atticus.interfaces.tcp_server import TCPServer
-
-HOST = '127.0.0.1'
-PORT = 42826
+from atticus import config
 
 
 def pytest_runtest_makereport(item, call):
@@ -28,23 +23,12 @@ def pytest_runtest_setup(item):
         if previousfailed is not None:
             pytest.xfail("previous test failed (%s)" % previousfailed.name)
 
-@pytest.fixture
-def simple_config():
-    return config.parse_file('./test_configs/simple_tcp.yaml')
 
 @pytest.fixture
-def simple_mockingbird_process(simple_config):
-    return mockingbird_process.MockingbirdProcess(simple_config)
-
-@pytest.fixture
-def blank_mockingbird():
-    """Create simple mockingbird object."""
-
-    return mockingbird.Mockingbird(None, None)
+def simple_config_file():
+    return './tests/test_configs/simple_tcp.yaml'
 
 
 @pytest.fixture
-def simple_tcp_server(blank_mockingbird):
-    """Create simple tcp server."""
-
-    return TCPServer({'address': HOST, 'port': PORT})
+def simple_config(simple_config_file):
+    return config.parse_file(simple_config_file)

@@ -3,7 +3,8 @@
 from abc import ABC, abstractmethod
 from collections import deque
 from threading import Event, Lock, Thread
-from typing import Any, Callable, Deque, Dict, Optional, Tuple
+from typing import Any, Callable, Deque, Dict, Optional, Tuple, Type
+from types import TracebackType
 
 from ._helpers.buffers_container import BuffersContainer
 
@@ -38,6 +39,9 @@ class Beak(ABC):
     def __init__(self, config: Dict) -> None:
         """The constructor for the Beak class."""
 
+        # Indicate that the interface has finished its startup process and is currently running.
+        self.__running = Event()
+
         self.__io_thread = Thread(target=self.__io_loop)
         self.__stop = False
 
@@ -54,11 +58,25 @@ class Beak(ABC):
         if self.__io_thread.is_alive():
             self.stop()
 
+    def __enter__(self) -> 'Beak':
+        self.start()
+        return self
+
+    def __exit__(self, ex: Type[BaseException], val: BaseException, trb: TracebackType) -> None:
+        self.stop()
+
     def start(self) -> None:
         """Starts the communication interface."""
 
         self.__stop = False
         self.__io_thread.start()
+
+        # Make sure interface finishes starting up before continuing.
+        # This is meant to guarantee that after start returns, the caller
+        # has a useable interface. For example, with TCPServer, this guarantees
+        # the server socket has been opened and can accept clients before start
+        # returns.
+        self.__running.wait()
 
     def stop(self) -> None:
         """Stops the communication interface."""
@@ -70,10 +88,12 @@ class Beak(ABC):
         """The main loop run by the IO thread."""
 
         self._start()
+        self.__running.set()
 
         while not self.__stop:
             self._run()
 
+        self.__running.clear()
         self._stop()
 
     def _receive(self, msg: str, output_buffer_key: Any) -> None:

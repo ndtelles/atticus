@@ -20,25 +20,34 @@ class MockingbirdProcess:
 
     def __init__(self, config: Dict) -> None:
         """ The constructor of the Mockingbird Process class """
+        self._status = MockingbirdProcess.Status.STOPPED
+        self._config = config
+        self._stop_event = Value('i', 0)
+        self._process = Process(target=mock, args=(
+            self._stop_event, self._config))
 
-        self.config = config
-        self.status = MockingbirdProcess.Status.STOPPED
-        self.stop_event = Value('i', 0)
-        self.process = Process(target=mock, args=(
-            self.stop_event, self.config))
+    def __del__(self) -> None:
+        if self._process.is_alive():
+            self.stop()
+
+    @property
+    def status(self) -> 'MockingbirdProcess.Status':
+        """Getter for status"""
+
+        return self._status
 
     def start(self) -> None:
         """ Start the process """
 
-        self.stop_event.value = 0
-        self.status = MockingbirdProcess.Status.RUNNING
-        self.process.start()
+        self._stop_event.value = 0
+        self._status = MockingbirdProcess.Status.RUNNING
+        self._process.start()
 
     def stop(self) -> None:
         """ Stop the process """
 
-        self.stop_event.value = 1
-        self.process.join(MockingbirdProcess.JOIN_TIMEOUT)
+        self._stop_event.value = 1
+        self._process.join(MockingbirdProcess.JOIN_TIMEOUT)
 
-        if not self.process.is_alive():
-            self.status = MockingbirdProcess.Status.STOPPED
+        if not self._process.is_alive():
+            self._status = MockingbirdProcess.Status.STOPPED

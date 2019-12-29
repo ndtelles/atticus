@@ -4,7 +4,7 @@ from collections import deque
 from threading import RLock
 from typing import Any, Deque, Dict, List, Optional, Set
 
-from ...errors import BufferMissingError
+from ...errors import BufferAlreadyExists, BufferMissingError
 
 
 class BuffersContainer:
@@ -20,9 +20,15 @@ class BuffersContainer:
         self._new_data: Set[Any] = set()
 
     def create(self, buffer_key: Any) -> None:
-        """Create a new buffer and store it in the buffer container."""
+        """Create a new buffer and store it in the buffer container.
+
+        Throws BufferAlreadyExists if a buffer with that key already exists.
+        """
 
         with self._lock:
+            if buffer_key in self._buffers:
+                raise BufferAlreadyExists
+
             self._buffers[buffer_key] = deque(maxlen=512)
 
     def append(self, buffer_key: Any, msg: str) -> None:
@@ -40,7 +46,11 @@ class BuffersContainer:
             self._new_data.add(buffer_key)
 
     def pop(self, buffer_key: Any) -> Optional[str]:
-        """Pops off a message from a buffer in FIFO order"""
+        """Pops off a message from a buffer in FIFO order
+
+        If buffer does not exist, pop throws BufferMissingError.
+        If there is nothing in the buffer, return None
+        """
 
         with self._lock:
             if buffer_key not in self._buffers:
@@ -61,12 +71,14 @@ class BuffersContainer:
 
         This in turn also deletes the new data notification for the buffer
         if it exists.
+        Throws BufferMissingError if a buffer with that key does not exist.
         """
 
         with self._lock:
-            if buffer_key in self._buffers:
-                del self._buffers[buffer_key]
+            if buffer_key not in self._buffers:
+                raise BufferMissingError
 
+            del self._buffers[buffer_key]
             self._new_data.discard(buffer_key)
 
     def new_data(self, ack: bool = True) -> List[Any]:
