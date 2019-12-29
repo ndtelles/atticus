@@ -1,0 +1,12 @@
+name: invalid yaml
+interface: invalid
+  tcp:
+    address: 127.0.0.1
+    port: 42826
+properties:
+  case-sensitive : no
+  terminator: CRLF
+requests:
+  'units?': 'micron'
+  'units torr' : ''
+
