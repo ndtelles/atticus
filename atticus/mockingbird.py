@@ -1,8 +1,10 @@
-from typing import Dict
+"""Defines the mockingbird class which handles requests."""
+
+from typing import Dict, Optional
 
 
-class MockingBird:
-    """ Class that holds the API for simulating the device. """
+class Mockingbird:
+    """Class that holds the API for simulating the device."""
 
     TERMINATORS = {
         'lf': "\n",
@@ -10,28 +12,33 @@ class MockingBird:
         'none': ""
     }
 
-    def __init__(self, requests: Dict[str, str] = {}, props: Dict[str, str] = {}) -> None:
-        """ Construct the mocking bird by internalizing the provided configs and requests. """
+    def __init__(self, requests: Optional[Dict[str, str]], props: Optional[Dict[str, str]]) -> None:
+        """Construct the mocking bird by internalizing the provided configs and requests."""
+
+        if props is None:
+            props = {}
 
         self.case_sensitive = props.get('case_sensitive', False)
         self.terminator = props.get('terminator', 'lf').lower()
-        
-        self.requests = {}
+
+        self.requests: Dict[str, str] = {}
         self.register_requests(requests)
-        
-    def register_requests(self, new_reqs: Dict[str, str]) -> None:
-        """ Register a new set of request response pairs. """
 
-        self.requests.update(new_reqs)
-    
+    def register_requests(self, new_reqs: Optional[Dict[str, str]]) -> None:
+        """Register a new set of request response pairs."""
+
+        if new_reqs is not None:
+            self.requests.update(new_reqs)
+
     def request(self, reqs_str: str) -> str:
-        """ Make request to the Mockingbird. Output the response. """
+        """Make request to the Mockingbird. Output the response."""
 
+        # @TODO: Check if this none check is necessary. If so, document why
         if self.terminator == 'none':
             reqs = [reqs_str]
         else:
-            reqs = reqs_str.split(MockingBird.TERMINATORS[self.terminator])
-            
+            reqs = reqs_str.split(Mockingbird.TERMINATORS[self.terminator])
+
         data = ''
         for req in filter(None, reqs):
             if not self.case_sensitive:
@@ -39,4 +46,4 @@ class MockingBird:
             data = self.requests.get(req, '')
 
         # Currently will only respond to last request!
-        return data + MockingBird.TERMINATORS[self.terminator]
+        return data + Mockingbird.TERMINATORS[self.terminator]
