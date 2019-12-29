@@ -13,7 +13,7 @@ class Atticus:
 
     def __init__(self) -> None:
         """Atticus constructor."""
-        self._mb_processes: Dict[str, MockingbirdProcess] = {}
+        self._mb_processes = {} # type: Dict[str, MockingbirdProcess]
 
     def __del__(self) -> None:
         """Make sure all processes are stopped and joined nicely when Atticus is deconstructed."""

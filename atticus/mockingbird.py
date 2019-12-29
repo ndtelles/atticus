@@ -21,7 +21,7 @@ class Mockingbird:
         self.case_sensitive = props.get('case_sensitive', False)
         self.terminator = props.get('terminator', 'lf').lower()
 
-        self.requests: Dict[str, str] = {}
+        self.requests = {} # type: Dict[str, str]
         self.register_requests(requests)
 
     def register_requests(self, new_reqs: Optional[Dict[str, str]]) -> None:
