@@ -13,7 +13,7 @@ PORT = 42826
 @pytest.fixture
 def tcp_server():
     """Tcp server that is not running."""
-    return TCPServer({'address': HOST, 'port': PORT})
+    return TCPServer({'name': 'test_tcp_interface', 'type': 'tcp_server', 'address': HOST, 'port': PORT})
 
 
 @pytest.fixture(scope='function')

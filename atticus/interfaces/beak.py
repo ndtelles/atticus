@@ -1,10 +1,12 @@
 """Beak provides abstract classes and methods for creating mockingbird communication interfaces."""
 
+import logging
+import logging.handlers
 from abc import ABC, abstractmethod
 from collections import deque
 from threading import Event, Lock, Thread
-from typing import Any, Callable, Deque, Dict, Optional, Tuple, Type
 from types import TracebackType
+from typing import Any, Callable, Deque, Dict, Optional, Tuple, Type
 
 from ._helpers.buffers_container import BuffersContainer
 
@@ -15,7 +17,7 @@ class Beak(ABC):
     # All interfaces share input buffer so that the input (and thus output) is
     # handeled as close to FIFO as possible
     __input_buffer = deque(
-        maxlen=512) # type: Deque[Tuple[str, Callable[[str], None]]]
+        maxlen=512)  # type: Deque[Tuple[str, Callable[[str], None]]]
     __input_buffer_lock = Lock()
     input_ready = Event()
 
@@ -48,6 +50,7 @@ class Beak(ABC):
         # Vars safe to use from inheriting interfaces
         self._config = config
         self._output_buffers = BuffersContainer()
+        self._log = logging.getLogger(config['name'])
 
     def __del__(self) -> None:
         """The desctructor for the Beak class.
@@ -71,7 +74,7 @@ class Beak(ABC):
         self.__stop = False
         self.__io_thread.start()
 
-        # Make sure interface finishes starting up before continuing.
+        # Block until the interface finishes starting up.
         # This is meant to guarantee that after start returns, the caller
         # has a useable interface. For example, with TCPServer, this guarantees
         # the server socket has been opened and can accept clients before start
@@ -80,9 +83,12 @@ class Beak(ABC):
 
     def stop(self) -> None:
         """Stops the communication interface."""
-
-        self.__stop = True
-        self.__io_thread.join()
+        try:
+            self.__stop = True
+            self.__io_thread.join(5)
+        finally:
+            # Make sure to free any memory used by the output buffer
+            self._output_buffers.clear()
 
     def __io_loop(self) -> None:
         """The main loop run by the IO thread."""

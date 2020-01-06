@@ -19,7 +19,7 @@ def empty_atticus():
 def loaded_atticus(empty_atticus, simple_config_file):
     """Create an Atticus object with a laoded config."""
 
-    empty_atticus.load(simple_config_file)
+    empty_atticus.load('test', simple_config_file)
     return empty_atticus
 
 
@@ -27,7 +27,7 @@ def loaded_atticus(empty_atticus, simple_config_file):
 def running_atticus(loaded_atticus):
     """Create an Atticus object with a running config."""
 
-    loaded_atticus.start('test_device')
+    loaded_atticus.start('test')
     return loaded_atticus
 
 
@@ -35,14 +35,13 @@ class TestAtticusAPI:
     """Test Atticus API"""
 
     def test_load(self, empty_atticus):
-        mb_name = empty_atticus.load('./tests/test_configs/simple_tcp.yaml')
-        assert mb_name == 'test_device'
-        assert mb_name in empty_atticus._mb_processes
+        empty_atticus.load('test', './tests/test_configs/simple_tcp.yaml')
+        assert 'test' in empty_atticus._mb_processes
 
     def test_load_already_loaded(self, empty_atticus):
-        empty_atticus.load('./tests/test_configs/simple_tcp.yaml')
+        empty_atticus.load('test', './tests/test_configs/simple_tcp.yaml')
         with pytest.raises(MockingbirdAlreadyLoaded):
-            empty_atticus.load('./tests/test_configs/simple_tcp.yaml')
+            empty_atticus.load('test', './tests/test_configs/simple_tcp.yaml')
 
     def test_unload(self, loaded_atticus):
         mb_name = next(iter(loaded_atticus._mb_processes))
