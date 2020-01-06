@@ -11,13 +11,13 @@ class BuffersContainer:
     """Provides a thread-safe container of buffers that can be selected by key"""
 
     def __init__(self) -> None:
-        self._buffers: Dict[Any, Deque[str]] = {}
+        self._buffers = {} # type: Dict[Any, Deque[str]]
         self._lock = RLock()
 
         # Used to notify callers of buffers that have brand new data.
         # Buffers are removed from the set when either a caller
         # acknowledges there is new data or the buffer becomes empty
-        self._new_data: Set[Any] = set()
+        self._new_data = set() # type: Set[Any]
 
     def clear(self) -> None:
         """Delete all buffers."""

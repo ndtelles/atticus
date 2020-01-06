@@ -1,5 +1,4 @@
 """Configuration for pytest"""
-import sys
 
 import pytest
 
