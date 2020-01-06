@@ -18,17 +18,21 @@ class MockingbirdProcess:
         STOPPED = 0
         RUNNING = 1
 
-    def __init__(self, config: Dict) -> None:
+    def __init__(self, config: Dict, mb_name: str) -> None:
         """ The constructor of the Mockingbird Process class """
         self._status = MockingbirdProcess.Status.STOPPED
         self._config = config
+        self._mb_name = mb_name
         self._stop_event = Value('i', 0)
-        self._process = Process(target=mock, args=(
-            self._stop_event, self._config))
+        self._process = self._create_process()
 
     def __del__(self) -> None:
         if self._process.is_alive():
             self.stop()
+
+    def _create_process(self) -> Process:
+        return Process(target=mock, args=(
+            self._stop_event, self._config, self._mb_name))
 
     @property
     def status(self) -> 'MockingbirdProcess.Status':
@@ -41,6 +45,7 @@ class MockingbirdProcess:
 
         self._stop_event.value = 0
         self._status = MockingbirdProcess.Status.RUNNING
+        self._process = self._create_process()
         self._process.start()
 
     def stop(self) -> None:

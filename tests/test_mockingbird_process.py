@@ -7,7 +7,7 @@ from atticus.mockingbird_process import MockingbirdProcess
 
 @pytest.fixture
 def simple_mockingbird_process(simple_config):
-    return MockingbirdProcess(simple_config)
+    return MockingbirdProcess(simple_config, 'test_mockingbird')
 
 
 @pytest.fixture
@@ -28,3 +28,10 @@ class TestMockingbirdProcess:
         simple_running_mockingbird_process.stop()
         assert simple_running_mockingbird_process.status is MockingbirdProcess.Status.STOPPED
         assert not simple_running_mockingbird_process._process.is_alive()
+
+    def test_restart(self, simple_running_mockingbird_process):
+        """Make sure mockingbird process can start again after being stopped."""
+        simple_running_mockingbird_process.stop()
+        simple_running_mockingbird_process.start()
+        assert simple_running_mockingbird_process.status is MockingbirdProcess.Status.RUNNING
+        assert simple_running_mockingbird_process._process.is_alive()

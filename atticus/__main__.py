@@ -2,9 +2,16 @@
 
 from .shell import Shell
 
-if __name__ == '__main__':
-    SHELL = Shell()
+
+def main() -> None:
+    """Start interactive Atticus shell"""
+
+    shl = Shell()
     try:
-        SHELL.cmdloop()
+        shl.cmdloop()
     except (KeyboardInterrupt, SystemExit):
-        SHELL.do_exit('')
+        shl.do_exit('')
+
+
+if __name__ == '__main__':
+    main()

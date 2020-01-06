@@ -19,6 +19,12 @@ class BuffersContainer:
         # acknowledges there is new data or the buffer becomes empty
         self._new_data = set() # type: Set[Any]
 
+    def clear(self) -> None:
+        """Delete all buffers."""
+        with self._lock:
+            self._buffers.clear()
+            self._new_data.clear()
+
     def create(self, buffer_key: Any) -> None:
         """Create a new buffer and store it in the buffer container.
 

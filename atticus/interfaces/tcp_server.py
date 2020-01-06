@@ -27,8 +27,10 @@ class TCPServer(Beak):
     def _start(self) -> None:
         """Start the tcp server."""
 
+        self._log.info('Starting the server')
         self._bind_socket(self._config['address'], self._config['port'])
-        self.server_sock.listen(10)
+        self.server_sock.listen()
+        self._log.info('Server listening')
 
     def _run(self) -> None:
         """Run one iteration of the TCP server.
@@ -52,8 +54,9 @@ class TCPServer(Beak):
     def _stop(self) -> None:
         """Stops the TCP server and closes any open IO."""
 
-        print("Stopping the TCP Server")
+        self._log.info('Stopping the server')
         self._close_socket()
+        self._log.info('Server stopped')
 
     def _socket_io(self, conn: socket.socket, mask: int) -> None:
         """Evaluate the selector mask to decide between reading from and writing to the client."""
@@ -68,10 +71,10 @@ class TCPServer(Beak):
 
         data = conn.recv(TCPServer.BUFFER_SIZE)
         if data:
-            print("Received request:", data)
+            self._log.info("Received message: %s", data)
             self._receive(data.decode('utf-8', 'replace'), conn)
         else:
-            print("Client disconnected")
+            self._log.info("Client disconnected")
             self._remove_client(conn)
 
     def _socket_send(self, conn: socket.socket) -> None:
@@ -80,8 +83,9 @@ class TCPServer(Beak):
         msg = self._output_buffers.pop(conn)
 
         if msg is not None:
-            conn.sendall(bytes(msg, 'utf8'))
-            print("Sent message:", msg)
+            msg_encoded = bytes(msg, 'utf8')
+            conn.sendall(msg_encoded)
+            self._log.info("Sent message: %s", msg_encoded)
 
         if self._output_buffers.is_empty(conn):
             # Nothing more to send. Set to read only
@@ -100,7 +104,7 @@ class TCPServer(Beak):
         """Accept incoming client connections."""
 
         conn, address = sock.accept()
-        print("Accepted client", address[0], address[1])
+        self._log.info('Client connected from %s port %d', address[0], address[1])
         conn.setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self._socket_io)
         self._output_buffers.create(conn)
@@ -118,14 +122,16 @@ class TCPServer(Beak):
         """
 
         port = req_port
+        self._log.info('Attempting to bind socket to %s port %d', addr, port)
+
         while True:
             try:
                 self.server_sock.bind((addr, port))
-                print('Socket bound on port', port)
+                self._log.info('Socket bound to %s port %d', addr, port)
                 break
             except socket.error as ex:
-                print('Socket failed to bind on port', port)
                 if ex.errno == errno.EADDRINUSE and port < req_port + TCPServer.MAX_BIND_TRIES:
+                    self._log.warning('Socket failed to bind on port %d. Trying next port', port)
                     port += 1
                 else:
                     raise
@@ -136,4 +142,5 @@ class TCPServer(Beak):
         self.sel.unregister(self.server_sock)
         self.server_sock.shutdown(socket.SHUT_RDWR)
         self.server_sock.close()
-        print('Socket closed')
+
+        self._log.info('Server socket closed')

@@ -1,6 +1,7 @@
 name: test_device
-interface:
-  tcp:
+interfaces:
+  - name: tcp_test_interface
+    type: tcp_server
     address: 127.0.0.1
     port: 42826
 properties:

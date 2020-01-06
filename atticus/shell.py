@@ -67,17 +67,23 @@ class Shell(cmd.Cmd):
         print('Unrecognized command:', line)
         return False
 
-    def do_load(self, arg: str) -> None:
+    def do_load(self, args: str) -> None:
         """Load a mockingbird configuration from a YAML file."""
 
+        mb_name, filename = args.split()
         try:
-            mb_name = self.atticus.load(arg)
-            print('Loaded', mb_name, 'from', arg)
+            self.atticus.load(mb_name, filename)
+            print('Loaded', mb_name, 'from', filename)
         except AtticusError as ex:
             print(ex)
 
     def complete_load(self, _: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Autocomplete line with file paths for load command."""
+
+        _, _, filename = line.split()
+
+        if filename is None:
+            return []
 
         return self.autocomplete_path(line, begidx, endidx)
 
@@ -116,7 +122,7 @@ class Shell(cmd.Cmd):
 
         try:
             self.atticus.start(arg)
-            print(arg, 'is now running')
+            print('Mockingbird', arg, 'is now running')
         except AtticusError as ex:
             print(ex)
 
@@ -130,7 +136,7 @@ class Shell(cmd.Cmd):
 
         try:
             self.atticus.stop(arg)
-            print(arg, 'is now stopped')
+            print('Mockingbird', arg, 'is now stopped')
         except AtticusError as ex:
             print(ex)
 

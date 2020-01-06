@@ -9,24 +9,26 @@ from .errors import ConfigIOError, InvalidConfig
 
 IP_REG = sch.Regex(
     r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')
+
+TCP_SCHEMA = sch.Schema({
+    'name': sch.And(str, sch.Regex(r'^[\w\d]+$')),
+    'type': 'tcp_server',
+    'address': IP_REG,
+    'port': int
+})
+
 SCHEMA = sch.Schema({
     'name': sch.And(str, sch.Regex(r'^[\w\d]+$')),
-    'interface': sch.Or(
-        {
-            # TODO: Interfaces should have names
-            'tcp': {
-                'address': IP_REG,
-                'port': int
-            },
-        },
-        # Future interfaces here
-    ),
+    'interfaces': [
+        TCP_SCHEMA
+    ],
     sch.Optional('properties'): {
         sch.Optional('case_sensitive'): bool,
         sch.Optional('terminator'): sch.And(
             str, sch.Use(str.lower), lambda s: s in ('crlf', 'lf', 'none'))
     },
-    # TODO: Should requests belong to a specific interface?
+    # TODO: Should requests belong to a specific interface? Especially since not everything
+    # is going to use ASCII requests
     'requests': {str: str}
 })
 
