@@ -20,17 +20,15 @@ class Atticus:
 
         self.stop_all()
 
-    def load(self, file: str) -> str:
-        """Load and parse the specified configuration file. Returns mockingbird name."""
-
-        config = parse_file(file)
-        mb_name = config['name']
+    def load(self, mb_name: str, file: str) -> None:
+        """Load and parse the specified configuration file."""
 
         if mb_name in self._mb_processes:
             raise MockingbirdAlreadyLoaded(mb_name)
 
-        self._mb_processes[mb_name] = MockingbirdProcess(config)
-        return mb_name
+        config = parse_file(file)
+
+        self._mb_processes[mb_name] = MockingbirdProcess(config, mb_name)
 
     def unload(self, mb_name: str) -> None:
         """Remove the mockingbird with the provided name."""
