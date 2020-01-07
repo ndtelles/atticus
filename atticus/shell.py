@@ -3,7 +3,7 @@
 import cmd
 import glob
 import os
-from typing import Any, List
+from typing import Any, Dict, List
 
 from .core import Atticus
 from .errors import AtticusError
@@ -60,6 +60,19 @@ class Shell(cmd.Cmd):
 
         return path
 
+    @staticmethod
+    def print_statuses(statuses: Dict) -> None:
+        """Pretty print mockingbird statuses."""
+
+        header = str.format("{:<20} {:<15}", 'Mockingbird', 'Status')
+        print()
+        print(header)
+        print('-' * 36)
+        for mb_name, stat in statuses.items():
+            row = str.format("{:<20} {:<15}", mb_name, stat['status'])
+            print(row)
+        print()
+
     def emptyline(self) -> bool:
         pass
 
@@ -105,10 +118,9 @@ class Shell(cmd.Cmd):
         """Print out the current status of loaded configurations."""
 
         try:
-            if arg:
-                print(self.atticus.status(*arg.split()))
-            else:
-                print(self.atticus.status())
+            statuses = self.atticus.status(*arg.split())
+            Shell.print_statuses(statuses)
+
         except AtticusError as ex:
             print(ex)
 

@@ -84,3 +84,14 @@ class TestAtticusAPI:
         mb_name = next(iter(loaded_atticus._mb_processes))
         with pytest.raises(MockingbirdNotRunning):
             loaded_atticus.stop(mb_name)
+
+    def test_stop_all(self, empty_atticus, simple_config_file):
+        mb1, mb2 = 'test1', 'test2'
+        empty_atticus.load(mb1, simple_config_file)
+        empty_atticus.load(mb2, simple_config_file)
+        empty_atticus.start(mb1)
+        empty_atticus.start(mb2)
+        empty_atticus.stop_all()
+
+        assert empty_atticus._mb_processes[mb1].status is MockingbirdProcess.Status.STOPPED
+        assert empty_atticus._mb_processes[mb2].status is MockingbirdProcess.Status.STOPPED
