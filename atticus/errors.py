@@ -20,6 +20,13 @@ class MockingbirdNotFound(AtticusAPIError):
         super().__init__("Mockingbird '{}' is not loaded".format(mb_name))
 
 
+class MockingbirdInvalidName(AtticusAPIError):
+    """Exception for when a mockingbird is loaded with an invalid name."""
+
+    def __init__(self, mb_name: str) -> None:
+        super().__init__("'{}' is not a valid Mockingbird name".format(mb_name))
+
+
 class MockingbirdAlreadyLoaded(AtticusAPIError):
     """Exception for when a mockingbird is loaded that already exists."""
 
@@ -61,13 +68,19 @@ class BeakError(AtticusError):
     """Base class for beak interface errors."""
 
 
-class BuffersContainerError(AtticusError):
-    """Base class for buffers container errors."""
+class MockingbirdError(AtticusError):
+    """Base class for mockingbird errors"""
 
 
-class BufferMissingError(BuffersContainerError):
-    """Exception for when a process attemps to operate on a non-existant output buffer."""
+class MockingbirdUndefinedVar(MockingbirdError):
+    """An undefined variable was encountered"""
+
+    def __init__(self, var_name: str) -> None:
+        super().__init__("Undefined variable '{}' encountered.".format(var_name))
 
 
-class BufferAlreadyExists(BuffersContainerError):
-    """Exception for when a buffer already exists"""
+class MockingbirdUndefinedBeak(MockingbirdError):
+    """An undefined beak was encountered"""
+
+    def __init__(self, beak_name: str) -> None:
+        super().__init__("Undefined beak '{}' encountered.".format(beak_name))

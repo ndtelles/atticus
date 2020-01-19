@@ -1,12 +1,22 @@
-name: test_device
 interfaces:
-  - name: tcp_test_interface
+  tcp_test_interface:
     type: tcp_server
     address: 127.0.0.1
     port: 42826
-properties:
-  case_sensitive : no
-  terminator: CRLF
-requests:
-  'units?': 'micron'
-  'units torr' : ''
+    line_ending: '\r\n'
+    requests:
+      - in: 'units?'
+        out: '$(unit)'
+        delay: 10
+      - in: 'units $(unit)'
+        out: '$(unit)'
+# properties:
+#   case_sensitive : no
+#   terminator: CRLF
+vars:
+  unit:
+    init: 0
+    type: uint
+  unit2:
+    init: torr
+    type: str

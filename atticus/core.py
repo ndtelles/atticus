@@ -1,10 +1,11 @@
 """Atticus API used for creating and controlling mockingbirds."""
 
+import re
 from typing import Any, Dict
 
-from .config import parse_file
+from .config import Config, parse_file
 from .errors import (MockingbirdAlreadyLoaded, MockingbirdNotFound,
-                     MockingbirdNotRunning, MockingbirdRunning)
+                     MockingbirdNotRunning, MockingbirdRunning, MockingbirdInvalidName)
 from .mockingbird_process import MockingbirdProcess
 
 
@@ -13,7 +14,7 @@ class Atticus:
 
     def __init__(self) -> None:
         """Atticus constructor."""
-        self._mb_processes = {} # type: Dict[str, MockingbirdProcess]
+        self._mb_processes = {}  # type: Dict[str, MockingbirdProcess]
 
     def __del__(self) -> None:
         """Make sure all processes are stopped and joined nicely when Atticus is deconstructed."""
@@ -22,6 +23,9 @@ class Atticus:
 
     def load(self, mb_name: str, file: str) -> None:
         """Load and parse the specified configuration file."""
+
+        if re.match(r'^\w+$', mb_name) is None:
+            raise MockingbirdInvalidName(mb_name)
 
         if mb_name in self._mb_processes:
             raise MockingbirdAlreadyLoaded(mb_name)

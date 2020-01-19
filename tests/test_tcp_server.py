@@ -47,7 +47,7 @@ class TestTCPServer:
         # Wait for tcp server to have processed input
         TCPServer.input_ready.wait(5)
 
-        msg, _ = TCPServer.read_buffer()
+        _, msg, _ = TCPServer.read_buffer()
         assert msg == 'hello world'
 
     def test_respond(self, client_and_server):
@@ -57,7 +57,7 @@ class TestTCPServer:
         # Wait for tcp server to have processed input
         TCPServer.input_ready.wait(5)
 
-        _, respond = TCPServer.read_buffer()
+        _, _, respond = TCPServer.read_buffer()
         respond('bar')
 
         assert client.recv(16) == b'bar'

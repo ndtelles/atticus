@@ -6,7 +6,7 @@ import os
 from typing import Any, Dict, List
 
 from .core import Atticus
-from .errors import AtticusError
+from .errors import AtticusAPIError
 
 
 class Shell(cmd.Cmd):
@@ -81,13 +81,19 @@ class Shell(cmd.Cmd):
         return False
 
     def do_load(self, args: str) -> None:
-        """Load a mockingbird configuration from a YAML file."""
+        """Load a mockingbird configuration from a YAML file.\nUsage: load mb_name config_file_path"""
 
-        mb_name, filename = args.split()
+        split_args = args.split()
+        if len(split_args) != 2:
+            self.invalid_command('load')
+            return
+
+        mb_name, filename = split_args
+
         try:
             self.atticus.load(mb_name, filename)
             print('Loaded', mb_name, 'from', filename)
-        except AtticusError as ex:
+        except AtticusAPIError as ex:
             print(ex)
 
     def complete_load(self, _: str, line: str, begidx: int, endidx: int) -> List[str]:
@@ -101,12 +107,16 @@ class Shell(cmd.Cmd):
         return self.autocomplete_path(line, begidx, endidx)
 
     def do_unload(self, arg: str) -> None:
-        """Unload a mockingbird configuration."""
+        """Unload a mockingbird configuration.\nUsage: unload mb_name"""
+
+        if not arg:
+            self.invalid_command('unload')
+            return
 
         try:
             self.atticus.unload(arg)
             print(arg, 'unloaded')
-        except AtticusError as ex:
+        except AtticusAPIError as ex:
             print(ex)
 
     def complete_unload(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
@@ -115,13 +125,13 @@ class Shell(cmd.Cmd):
         return self.autocomplete_mb(text)
 
     def do_status(self, arg: str) -> None:
-        """Print out the current status of loaded configurations."""
+        """Print out the current status of loaded configurations.\nUsage: status [mb_name ...]"""
 
         try:
             statuses = self.atticus.status(*arg.split())
             Shell.print_statuses(statuses)
 
-        except AtticusError as ex:
+        except AtticusAPIError as ex:
             print(ex)
 
     def complete_status(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
@@ -130,12 +140,16 @@ class Shell(cmd.Cmd):
         return self.autocomplete_mb(text)
 
     def do_start(self, arg: str) -> None:
-        """Start the specified mockingbird config."""
+        """Start the specified mockingbird config.\nUsage: start mb_name"""
+
+        if not arg:
+            self.invalid_command('start')
+            return
 
         try:
             self.atticus.start(arg)
             print('Mockingbird', arg, 'is now running')
-        except AtticusError as ex:
+        except AtticusAPIError as ex:
             print(ex)
 
     def complete_start(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
@@ -144,12 +158,16 @@ class Shell(cmd.Cmd):
         return self.autocomplete_mb(text)
 
     def do_stop(self, arg: str) -> None:
-        """Stop the specified mockingbird config."""
+        """Stop the specified mockingbird config.\nUsage: stop mb_name"""
+
+        if not arg:
+            self.invalid_command('stop')
+            return
 
         try:
             self.atticus.stop(arg)
             print('Mockingbird', arg, 'is now stopped')
-        except AtticusError as ex:
+        except AtticusAPIError as ex:
             print(ex)
 
     def complete_stop(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
@@ -161,9 +179,14 @@ class Shell(cmd.Cmd):
         """Exit the atticus shell."""
 
         self.atticus.stop_all()
-        print("Goodbye!")
+        print("\nGoodbye!")
         return True
 
     def autocomplete_mb(self, text: str) -> List[str]:
         """Returns all mockinbirds that have names that start with the given text."""
         return [mb_name for mb_name in self.atticus.status() if mb_name.startswith(text)]
+
+    def invalid_command(self, command: str) -> None:
+        print("Invalid use of command", command)
+        print()
+        self.do_help(command)

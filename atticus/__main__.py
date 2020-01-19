@@ -1,5 +1,7 @@
 """Provides the entry-point to Atticus when run from the command line."""
 
+import multiprocessing as mp
+
 from .shell import Shell
 
 
@@ -14,4 +16,5 @@ def main() -> None:
 
 
 if __name__ == '__main__':
+    mp.set_start_method('spawn')
     main()
