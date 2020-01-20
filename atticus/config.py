@@ -16,13 +16,13 @@ TCP_SCHEMA = sch.Schema({
     'type': 'tcp_server',
     'address': IP_REG,
     'port': sch.And(sch.Use(int), lambda n: 0 <= n <= 65535),
-    sch.Optional('line_ending'): str,
-    sch.Optional('default_response'): str,
-    sch.Optional('latency'): sch.And(sch.Use(int), lambda n: 0 <= n),
+    sch.Optional('line_ending', default="\n"): str,
+    sch.Optional('default_response', default=''): str,
+    sch.Optional('latency', default=0): sch.And(sch.Use(int), lambda n: 0 <= n),
     'requests': [{
         'in': str,
         'out': str,
-        sch.Optional('delay'): sch.And(sch.Use(int), lambda n: 0 <= n)
+        sch.Optional('delay', default=0): sch.And(sch.Use(int), lambda n: 0 <= n)
     }]
 })
 
