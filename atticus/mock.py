@@ -1,13 +1,12 @@
 """This module manages the mockingbird object and interfaces."""
 
 import logging
-import multiprocessing
 import threading
 from multiprocessing import Process, Queue
-from typing import Dict, List, Optional
+from typing import Optional
 
 from .config import Config
-from .errors import MockingbirdUndefinedBeak
+from .helpers import drain_queue
 from .logger import configure_log, logger_main
 from .mockingbird import Mockingbird
 
@@ -26,7 +25,6 @@ def mock_main(stop: threading.Event, config: Config, mb_name: str) -> None:
         log = logging.getLogger(mb_name)
         log.info('Booting mockingbird')
 
-        
         mockingbird = Mockingbird(mb_name, log_q, config)
 
         with mockingbird:
@@ -44,3 +42,10 @@ def mock_main(stop: threading.Event, config: Config, mb_name: str) -> None:
             log_process.join(5)
         except NameError:
             pass  # log_q or log_process weren't defined yet
+        try:
+            # The log queue can still have stuff in it if the log process was
+            # never started. Drain the queue to keep joining the process from
+            # blocking
+            drain_queue(log_q)
+        except NameError:
+            pass

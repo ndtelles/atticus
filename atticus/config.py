@@ -9,8 +9,10 @@ from .errors import ConfigIOError, InvalidConfig
 
 SAFE_STR_REG = sch.Regex(r'^[\w\d]+$')
 
+# Regex for validating ip addressses
 IP_REG = sch.Regex(
-    r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')
+    r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}'
+    r'(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')
 
 TCP_SCHEMA = sch.Schema({
     'type': 'tcp_server',
@@ -30,11 +32,6 @@ SCHEMA = sch.Schema({
     'interfaces': {
         sch.And(str, SAFE_STR_REG): TCP_SCHEMA
     },
-    # sch.Optional('properties'): {
-    #     sch.Optional('case_sensitive'): bool,
-    #     sch.Optional('terminator'): sch.And(
-    #         str, sch.Use(str.lower), lambda s: s in ('crlf', 'lf', 'none'))
-    # },
     sch.Optional('vars'): {
         sch.And(str, SAFE_STR_REG): {
             'init': sch.Or(str, int),
@@ -45,7 +42,10 @@ SCHEMA = sch.Schema({
 
 
 def parse_file(file_path: str) -> 'Config':
-    """Open the yaml file at the provided path and parse it to generate a config object."""
+    """Open the yaml file at the provided path and parse it.
+
+    Generates a config object which is returned to the caller
+    """
 
     try:
         with open(file_path, 'r') as file:
@@ -63,7 +63,7 @@ class Config:
     """Convert config to a class for easier use throughout Atticus
 
     The goal of this class is to reduce the amount having to update
-    dictionary key accessors throughout Atticus everytime the Schema 
+    dictionary key accessors throughout Atticus everytime the Schema
     for the config changes. By having it stored as a class, changes
     may only require changing the Config class and not keys thoughout
     the entire program and all subprocesses. It would be great to use

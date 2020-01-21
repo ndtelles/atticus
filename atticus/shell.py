@@ -1,4 +1,4 @@
-"""Provides a shell class for interactivly using Attiucs from the command line."""
+"""Shell class for interactivly using Attiucs from the command line."""
 
 import cmd
 import glob
@@ -12,8 +12,8 @@ from .errors import AtticusAPIError
 class Shell(cmd.Cmd):
     """Creates an interactive shell for controlling Atticus.
 
-    This class inherits the Python cmd class in order to create a custom shell which
-    calls the API methods from core.py
+    This class inherits the Python cmd class in order to create a custom shell
+    which calls the API methods from core.py
     """
 
     prompt = 'atticus> '
@@ -29,8 +29,8 @@ class Shell(cmd.Cmd):
     def autocomplete_path(line: str, begidx: int, endidx: int) -> List[str]:
         """Autocomplete file path.
 
-        Created with help from the Stack Overflow answer https://stackoverflow.com/a/27256663
-        Answer by meffie
+        Created with help from the Stack Overflow answer by meffie
+        https://stackoverflow.com/a/27256663
         """
 
         before_arg = line.rfind(" ", 0, begidx)
@@ -51,8 +51,8 @@ class Shell(cmd.Cmd):
     def append_slash_if_dir(path: str) -> str:
         """Append a slash to path name if the path is a directory
 
-        Created with help from the Stack Overflow answer https://stackoverflow.com/a/27256663
-        Answer by meffie
+        Created with help from the Stack Overflow answer by meffie
+        https://stackoverflow.com/a/27256663
         """
 
         if path and os.path.isdir(path) and path[-1] != os.sep:
@@ -81,7 +81,9 @@ class Shell(cmd.Cmd):
         return False
 
     def do_load(self, args: str) -> None:
-        """Load a mockingbird configuration from a YAML file.\nUsage: load mb_name config_file_path"""
+        """Load a mockingbird configuration from a YAML file.
+
+        Usage: load mb_name config_file_path"""
 
         split_args = args.split()
         if len(split_args) != 2:
@@ -96,7 +98,7 @@ class Shell(cmd.Cmd):
         except AtticusAPIError as ex:
             print(ex)
 
-    def complete_load(self, _: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_load(self, _: str, line: str, beg: int, end: int) -> List[str]:
         """Autocomplete line with file paths for load command."""
 
         _, _, filename = line.split()
@@ -104,7 +106,7 @@ class Shell(cmd.Cmd):
         if filename is None:
             return []
 
-        return self.autocomplete_path(line, begidx, endidx)
+        return self.autocomplete_path(line, beg, end)
 
     def do_unload(self, arg: str) -> None:
         """Unload a mockingbird configuration.\nUsage: unload mb_name"""
@@ -119,13 +121,16 @@ class Shell(cmd.Cmd):
         except AtticusAPIError as ex:
             print(ex)
 
-    def complete_unload(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
+    def complete_unload(self, txt: str, _0: str, _1: int, _2: int) -> List[str]:
         """Autocomplete line with mockingbird names for unload command."""
 
-        return self.autocomplete_mb(text)
+        return self.autocomplete_mb(txt)
 
     def do_status(self, arg: str) -> None:
-        """Print out the current status of loaded configurations.\nUsage: status [mb_name ...]"""
+        """Print out the current status of loaded configurations.
+
+        Usage: status [mb_name ...]
+        """
 
         try:
             statuses = self.atticus.status(*arg.split())
@@ -134,10 +139,10 @@ class Shell(cmd.Cmd):
         except AtticusAPIError as ex:
             print(ex)
 
-    def complete_status(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
+    def complete_status(self, txt: str, _0: str, _1: int, _2: int) -> List[str]:
         """Autocomplete line with mockingbird names for status command."""
 
-        return self.autocomplete_mb(text)
+        return self.autocomplete_mb(txt)
 
     def do_start(self, arg: str) -> None:
         """Start the specified mockingbird config.\nUsage: start mb_name"""
@@ -152,10 +157,10 @@ class Shell(cmd.Cmd):
         except AtticusAPIError as ex:
             print(ex)
 
-    def complete_start(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
+    def complete_start(self, txt: str, _0: str, _1: int, _2: int) -> List[str]:
         """Autocomplete line with mockingbird names for start command."""
 
-        return self.autocomplete_mb(text)
+        return self.autocomplete_mb(txt)
 
     def do_stop(self, arg: str) -> None:
         """Stop the specified mockingbird config.\nUsage: stop mb_name"""
@@ -182,9 +187,9 @@ class Shell(cmd.Cmd):
         print("\nGoodbye!")
         return True
 
-    def autocomplete_mb(self, text: str) -> List[str]:
-        """Returns all mockinbirds that have names that start with the given text."""
-        return [mb_name for mb_name in self.atticus.status() if mb_name.startswith(text)]
+    def autocomplete_mb(self, txt: str) -> List[str]:
+        """Returns all mockinbirds that have names starting with txt."""
+        return [name for name in self.atticus.status() if name.startswith(txt)]
 
     def invalid_command(self, command: str) -> None:
         print("Invalid use of command", command)

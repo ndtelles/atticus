@@ -12,7 +12,6 @@ class TCPModbusServer(Beak):
         def setValues(self, address: int, values: int) -> None:
             super().setValues(address, values)
 
-
     def _start(self) -> None:
         identity = ModbusDeviceIdentification()
         block = TCPModbusServer.CallbackDataBlock(0x00, [0]*0xff)

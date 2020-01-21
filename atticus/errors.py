@@ -24,7 +24,8 @@ class MockingbirdInvalidName(AtticusAPIError):
     """Exception for when a mockingbird is loaded with an invalid name."""
 
     def __init__(self, mb_name: str) -> None:
-        super().__init__("'{}' is not a valid Mockingbird name".format(mb_name))
+        super().__init__(
+            "'{}' is not a valid Mockingbird name".format(mb_name))
 
 
 class MockingbirdAlreadyLoaded(AtticusAPIError):
@@ -35,17 +36,18 @@ class MockingbirdAlreadyLoaded(AtticusAPIError):
 
 
 class MockingbirdNotRunning(AtticusAPIError):
-    """Exception for when a command is invalid because the mockingbird is not running."""
+    """Command is invalid because the mockingbird is not running."""
 
     def __init__(self, mb_name: str) -> None:
         super().__init__("Mockingbird '{}' is not running".format(mb_name))
 
 
 class MockingbirdRunning(AtticusAPIError):
-    """Exception for when a command is invalid because the mockingbird is running."""
+    """Command is invalid because the mockingbird is running."""
 
     def __init__(self, mb_name: str) -> None:
-        super().__init__("Mockingbird '{}' is currently running".format(mb_name))
+        super().__init__(
+            "Mockingbird '{}' is currently running".format(mb_name))
 
 
 class ConfigError(AtticusError):
@@ -76,7 +78,8 @@ class MockingbirdUndefinedVar(MockingbirdError):
     """An undefined variable was encountered"""
 
     def __init__(self, var_name: str) -> None:
-        super().__init__("Undefined variable '{}' encountered.".format(var_name))
+        super().__init__(
+            "Undefined variable '{}' encountered.".format(var_name))
 
 
 class MockingbirdUndefinedBeak(MockingbirdError):

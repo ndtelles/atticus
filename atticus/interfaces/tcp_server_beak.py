@@ -1,4 +1,4 @@
-"""TCP communication interface for clients to talk to the Mockingbird server."""
+"""TCP interface for clients to talk to the Mockingbird server."""
 
 import errno
 import socket
@@ -10,35 +10,32 @@ from uuid import uuid4
 from .beak import Beak
 
 
-class TCPServerBeak(Beak, ThreadingTCPServer):
+class TCPServerBeak(Beak, ThreadingTCPServer):  # type: ignore
 
     # Threading TCP Server attributes
     allow_reuse_address = True
-    block_on_close = False  # Makes sure we have consistent behavior between Python versions
+    block_on_close = True  # Ensure consistent behavior for mult python vers
+    daemon_threads = False
 
     # TCPServerBeak attributes
-    max_bind_tries = 10
+    MAX_BIND_TRIES = 10
 
     def __init__(self, *args: Any) -> None:
         Beak.__init__(self, *args)
-        ThreadingTCPServer.__init__(
-            self, (self._config.props['address'], self._config.props['port']), _TCPHandler, False)
+        ThreadingTCPServer.__init__(self,
+                                    (self._config.props['address'],
+                                     self._config.props['port']),
+                                    _TCPHandler,
+                                    False)
 
         self.server_thread = Thread(target=self.serve_forever)
-        # Exit the server thread when the main thread terminates
-        # self.server_thread.daemon = True
-
         self.consumer_thread = Thread(target=self.mb_receive_loop)
-        # self.consumer_thread.daemon = True
 
     def server_bind(self) -> None:
         """Called to bind the socket. Overriden from ThreadingTCPServer class
 
-        Added feature: If port is not available incrementally search for an open port.
+        Added feature: Incrementally search for an open port.
         """
-
-        addr, req_port = self.server_address
-        port = req_port
 
         if self.allow_reuse_address:
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -46,25 +43,13 @@ class TCPServerBeak(Beak, ThreadingTCPServer):
         self._log.info('Attempting to bind socket to %s port %d',
                        *self.server_address)
 
-        while True:
-            try:
-                self.socket.bind((addr, port))
-                self.server_address = self.socket.getsockname()
-                self._log.info('Socket bound to %s port %d',
-                               *self.server_address)
-                break
-            except socket.error as ex:
-                if ex.errno == errno.EADDRINUSE and port < req_port + TCPServerBeak.max_bind_tries:
-                    self._log.warn(
-                        'Socket failed to bind on port %d. Trying next port', port)
-                    port += 1
-                else:
-                    raise
+        self.socket.bind(self.server_address)
 
     def _boot_beak(self) -> None:
         if b'\\' in self._config.props['line_ending'].encode('utf8', 'ignore'):
             self._log.warning(
-                'Escaped characters detected in line ending. Wrap line ending in double quotes in YAML config.')
+                'Escaped characters detected in line ending.'
+                ' Wrap line ending in double quotes in YAML config.')
 
         self._log.info('Registering requests')
 
@@ -80,8 +65,31 @@ class TCPServerBeak(Beak, ThreadingTCPServer):
         # when requests are registered that the boot process can wait on
 
         self._log.info('Booting server')
-        self.server_bind()
-        self.server_activate()
+
+        tries = TCPServerBeak.MAX_BIND_TRIES
+        while True:
+            try:
+                self.server_bind()
+
+                # Very rarely bind will succeed but socket listen will still
+                # get errno.EADDRINUSE.
+                self.server_activate()
+                break
+            except socket.error as ex:
+                # Keep trying ports until we run out of tries
+                if ex.errno == errno.EADDRINUSE and tries >= 1:
+                    self._log.warning(
+                        'Socket failed to bind port %d. Trying next port',
+                        self.server_address[1])
+                    self.server_address = (
+                        self.server_address[0], self.server_address[1] + 1)
+                    tries -= 1
+                else:
+                    self._log.critical('Failed to bind to any socket')
+                    raise
+
+        self.server_address = self.socket.getsockname()
+        self._log.info('Socket bound to %s: %d', *self.server_address)
 
     def _run_beak(self) -> None:
         self.server_thread.start()
@@ -91,7 +99,7 @@ class TCPServerBeak(Beak, ThreadingTCPServer):
     def _shutdown_beak(self) -> None:
         self._log.info('Shutting down server')
 
-        # Stop consumer thread before server so the consumer thread doesn't try to
+        # Stop consumer thread before server so consumer thread doesn't try to
         # send responses to no longer existing clients after server has stopped
         self.consumer_thread.join()
 
@@ -111,30 +119,37 @@ class TCPServerBeak(Beak, ThreadingTCPServer):
 class _TCPHandler(BaseRequestHandler):
     """Handle clients that connect to the TCP server
 
-    A TCP Handler is instantiated in a new thread each time a client connects to the TCP server."""
+    A TCP Handler is instantiated in a new thread each time a client connects
+    to the TCP server.
+    """
 
-    # Limit size of buffer so a client spamming data without line endings won't crash
-    # the program by using all of the available memory
-    max_buffer_size = 16384
+    TIMEOUT = 0.5
+
+    # Limit size of buffer so a client spamming data without line endings
+    # can't crash the program by using all of the available memory
+    MAX_BUFFER_SIZE = 16384
 
     clients = {}  # type: Dict[str, '_TCPHandler']
 
     @staticmethod
     def respond(key: str, msg: str) -> None:
-        """Allows for the server to respond to a client with a mockingbird response"""
+        """Allows server to respond to a client with a mockingbird response"""
         handler = _TCPHandler.clients.get(key, None)
+
+        if handler is None:  # Connection was dropped
+            return
+
         handler.response = msg
         handler.respond_event.set()
 
     def setup(self) -> None:
-        self.config = self.server.config
-        self.line_ending = self.config.props['line_ending'].encode(
-            'utf8', 'ignore')
-
-        self.log = self.server.log
+        self.config = self.server.config  # type: ignore
+        self.log = self.server.log  # type: ignore
+        self.stop_event = self.server._stop_event  # type: ignore
+        self.term = self.config.props['line_ending'].encode('utf8', 'ignore')
 
         self.key = str(uuid4())
-        self.clients[self.key] = self
+        _TCPHandler.clients[self.key] = self
         self.respond_event = Event()
         self.response = ''
 
@@ -144,39 +159,43 @@ class _TCPHandler(BaseRequestHandler):
         read_buffer = []
         read_buffer_len = 0
 
-        while not self.server._stop_event.is_set():
-            # Disconnect client if read buffer is at its limit
-            if read_buffer_len >= _TCPHandler.max_buffer_size:
-                self.log.error(
-                    "Client %s: %d exceeded max buffer length. Disconnecting.", *self.client_address)
-                break
-
-            self.request.settimeout(0.5)
+        while not self.stop_event.is_set():
+            self.request.settimeout(_TCPHandler.TIMEOUT)
 
             try:
                 # Peek at data in buffer
-                peeked_data = self.request.recv(4096, socket.MSG_PEEK)
+                peeked = self.request.recv(4096, socket.MSG_PEEK)
 
-                if not peeked_data:
+                if not peeked:
                     self.log.info("Client %s: %d disconnected",
                                   *self.client_address)
-                    break
+                    return
 
-                # Find the position of the line ending if it exists. Otherwise throw exception
-                line_end_pos = peeked_data.index(
-                    self.line_ending) + len(self.line_ending)
+                # Find the position of the line ending if it exists.
+                # Otherwise throw exception
+                end_pos = peeked.index(self.term) + len(self.term)
             except socket.timeout:
-                continue  # Try again from the top
-            except ValueError:  # No line ending in read data
-                # Store read characters in buffer and keep reading
+                continue  # Try again from the top to check stop event
+            except ValueError:
+                # No line ending was detected in peeked data from socket.
+                # Take the data read so far and store it in a buffer
+
                 self.log.info('Received partial request from %s: %d. %s',
-                              *self.client_address, peeked_data)
-                read_buffer.append(self.request.recv(len(peeked_data)))
-                read_buffer_len += len(peeked_data)
+                              *self.client_address, peeked)
+                read_buffer.append(self.request.recv(len(peeked)))
+                read_buffer_len += len(peeked)
+
+                # Disconnect client if read buffer is at its limit
+                if read_buffer_len >= _TCPHandler.MAX_BUFFER_SIZE:
+                    self.log.error(
+                        "Client %s: %d exceeded max buffer length.",
+                        *self.client_address)
+                    return
+
                 continue
 
-            # Read all characters until line ending
-            read_buffer.append(self.request.recv(line_end_pos))
+            # Read all characters into buffer until line ending
+            read_buffer.append(self.request.recv(end_pos))
             read_bytes = b''.join(read_buffer)
 
             self.log.info('Received request from %s: %d. %s',
@@ -184,12 +203,17 @@ class _TCPHandler(BaseRequestHandler):
 
             # Pass request data to mockingbird
             request_data = read_bytes.rstrip(
-                self.line_ending).decode('utf-8', 'ignore')
-            self.server._mb_request(self.key, request_data)
+                self.term).decode('utf-8', 'ignore')
+            self.server._mb_request(self.key, request_data)  # type: ignore
 
-            # Wait for a response to be received
-            self.respond_event.wait()
-            self.request.sendall(self.response.encode('utf8', 'ignore') + self.line_ending)
+            # Wait for a response to be received.
+            # Poll stop event to ensure exit happens if event occurs
+            while not self.respond_event.wait(_TCPHandler.TIMEOUT):
+                if self.stop_event.is_set():
+                    return
+
+            self.request.sendall(self.response.encode(
+                'utf8', 'ignore') + self.term)
 
             # Prepare for next request
             self.respond_event.clear()
@@ -197,4 +221,4 @@ class _TCPHandler(BaseRequestHandler):
             read_buffer_len = 0
 
     def finish(self) -> None:
-        del self.clients[self.key]
+        del _TCPHandler.clients[self.key]

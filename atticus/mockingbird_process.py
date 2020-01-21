@@ -2,13 +2,13 @@
 
 from enum import Enum
 from multiprocessing import Event, Process
-from typing import Dict
 
 from .config import Config
 from .mock import mock_main
 
+
 class MockingbirdProcess:
-    """Class for controlling the child mockingbird processes created by atticus"""
+    """Class for controlling mockingbird processes created by atticus"""
 
     class Status(Enum):
         """Enum class representing the status of the mockingbird process."""
@@ -56,5 +56,5 @@ class MockingbirdProcess:
 
         self._stop_event.set()
         self._process.join()
-        
+
         self._status = MockingbirdProcess.Status.STOPPED
