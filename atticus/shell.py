@@ -1,19 +1,19 @@
-"""Provides a shell class for interactivly using Attiucs from the command line."""
+"""Shell class for interactivly using Attiucs from the command line."""
 
 import cmd
 import glob
 import os
-from typing import Any, List
+from typing import Any, Dict, List
 
 from .core import Atticus
-from .errors import AtticusError
+from .errors import AtticusAPIError
 
 
 class Shell(cmd.Cmd):
     """Creates an interactive shell for controlling Atticus.
 
-    This class inherits the Python cmd class in order to create a custom shell which
-    calls the API methods from core.py
+    This class inherits the Python cmd class in order to create a custom shell
+    which calls the API methods from core.py
     """
 
     prompt = 'atticus> '
@@ -29,8 +29,8 @@ class Shell(cmd.Cmd):
     def autocomplete_path(line: str, begidx: int, endidx: int) -> List[str]:
         """Autocomplete file path.
 
-        Created with help from the Stack Overflow answer https://stackoverflow.com/a/27256663
-        Answer by meffie
+        Created with help from the Stack Overflow answer by meffie
+        https://stackoverflow.com/a/27256663
         """
 
         before_arg = line.rfind(" ", 0, begidx)
@@ -51,14 +51,27 @@ class Shell(cmd.Cmd):
     def append_slash_if_dir(path: str) -> str:
         """Append a slash to path name if the path is a directory
 
-        Created with help from the Stack Overflow answer https://stackoverflow.com/a/27256663
-        Answer by meffie
+        Created with help from the Stack Overflow answer by meffie
+        https://stackoverflow.com/a/27256663
         """
 
         if path and os.path.isdir(path) and path[-1] != os.sep:
             return path + os.sep
 
         return path
+
+    @staticmethod
+    def print_statuses(statuses: Dict) -> None:
+        """Pretty print mockingbird statuses."""
+
+        header = str.format("{:<20} {:<15}", 'Mockingbird', 'Status')
+        print()
+        print(header)
+        print('-' * 36)
+        for mb_name, stat in statuses.items():
+            row = str.format("{:<20} {:<15}", mb_name, stat['status'])
+            print(row)
+        print()
 
     def emptyline(self) -> bool:
         pass
@@ -68,16 +81,24 @@ class Shell(cmd.Cmd):
         return False
 
     def do_load(self, args: str) -> None:
-        """Load a mockingbird configuration from a YAML file."""
+        """Load a mockingbird configuration from a YAML file.
 
-        mb_name, filename = args.split()
+        Usage: load mb_name config_file_path"""
+
+        split_args = args.split()
+        if len(split_args) != 2:
+            self.invalid_command('load')
+            return
+
+        mb_name, filename = split_args
+
         try:
             self.atticus.load(mb_name, filename)
             print('Loaded', mb_name, 'from', filename)
-        except AtticusError as ex:
+        except AtticusAPIError as ex:
             print(ex)
 
-    def complete_load(self, _: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_load(self, _: str, line: str, beg: int, end: int) -> List[str]:
         """Autocomplete line with file paths for load command."""
 
         _, _, filename = line.split()
@@ -85,59 +106,73 @@ class Shell(cmd.Cmd):
         if filename is None:
             return []
 
-        return self.autocomplete_path(line, begidx, endidx)
+        return self.autocomplete_path(line, beg, end)
 
     def do_unload(self, arg: str) -> None:
-        """Unload a mockingbird configuration."""
+        """Unload a mockingbird configuration.\nUsage: unload mb_name"""
+
+        if not arg:
+            self.invalid_command('unload')
+            return
 
         try:
             self.atticus.unload(arg)
             print(arg, 'unloaded')
-        except AtticusError as ex:
+        except AtticusAPIError as ex:
             print(ex)
 
-    def complete_unload(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
+    def complete_unload(self, txt: str, _0: str, _1: int, _2: int) -> List[str]:
         """Autocomplete line with mockingbird names for unload command."""
 
-        return self.autocomplete_mb(text)
+        return self.autocomplete_mb(txt)
 
     def do_status(self, arg: str) -> None:
-        """Print out the current status of loaded configurations."""
+        """Print out the current status of loaded configurations.
+
+        Usage: status [mb_name ...]
+        """
 
         try:
-            if arg:
-                print(self.atticus.status(*arg.split()))
-            else:
-                print(self.atticus.status())
-        except AtticusError as ex:
+            statuses = self.atticus.status(*arg.split())
+            Shell.print_statuses(statuses)
+
+        except AtticusAPIError as ex:
             print(ex)
 
-    def complete_status(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
+    def complete_status(self, txt: str, _0: str, _1: int, _2: int) -> List[str]:
         """Autocomplete line with mockingbird names for status command."""
 
-        return self.autocomplete_mb(text)
+        return self.autocomplete_mb(txt)
 
     def do_start(self, arg: str) -> None:
-        """Start the specified mockingbird config."""
+        """Start the specified mockingbird config.\nUsage: start mb_name"""
+
+        if not arg:
+            self.invalid_command('start')
+            return
 
         try:
             self.atticus.start(arg)
             print('Mockingbird', arg, 'is now running')
-        except AtticusError as ex:
+        except AtticusAPIError as ex:
             print(ex)
 
-    def complete_start(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
+    def complete_start(self, txt: str, _0: str, _1: int, _2: int) -> List[str]:
         """Autocomplete line with mockingbird names for start command."""
 
-        return self.autocomplete_mb(text)
+        return self.autocomplete_mb(txt)
 
     def do_stop(self, arg: str) -> None:
-        """Stop the specified mockingbird config."""
+        """Stop the specified mockingbird config.\nUsage: stop mb_name"""
+
+        if not arg:
+            self.invalid_command('stop')
+            return
 
         try:
             self.atticus.stop(arg)
             print('Mockingbird', arg, 'is now stopped')
-        except AtticusError as ex:
+        except AtticusAPIError as ex:
             print(ex)
 
     def complete_stop(self, text: str, _0: str, _1: int, _2: int) -> List[str]:
@@ -149,9 +184,14 @@ class Shell(cmd.Cmd):
         """Exit the atticus shell."""
 
         self.atticus.stop_all()
-        print("Goodbye!")
+        print("\nGoodbye!")
         return True
 
-    def autocomplete_mb(self, text: str) -> List[str]:
-        """Returns all mockinbirds that have names that start with the given text."""
-        return [mb_name for mb_name in self.atticus.status() if mb_name.startswith(text)]
+    def autocomplete_mb(self, txt: str) -> List[str]:
+        """Returns all mockinbirds that have names starting with txt."""
+        return [name for name in self.atticus.status() if name.startswith(txt)]
+
+    def invalid_command(self, command: str) -> None:
+        print("Invalid use of command", command)
+        print()
+        self.do_help(command)
