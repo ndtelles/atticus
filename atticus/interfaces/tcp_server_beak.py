@@ -4,7 +4,7 @@ import errno
 import socket
 from socketserver import BaseRequestHandler, ThreadingTCPServer
 from threading import Event, Thread
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 from uuid import uuid4
 
 from .beak import Beak
@@ -14,7 +14,11 @@ class TCPServerBeak(Beak, ThreadingTCPServer):  # type: ignore
 
     # Threading TCP Server attributes
     allow_reuse_address = True
-    block_on_close = True  # Ensure consistent behavior for mult python vers
+
+    # Name of this attribute changes in Python 3.7
+    _block_on_close = True
+    block_on_close = True
+
     daemon_threads = False
 
     # TCPServerBeak attributes
@@ -22,28 +26,12 @@ class TCPServerBeak(Beak, ThreadingTCPServer):  # type: ignore
 
     def __init__(self, *args: Any) -> None:
         Beak.__init__(self, *args)
-        ThreadingTCPServer.__init__(self,
-                                    (self._config.props['address'],
-                                     self._config.props['port']),
-                                    _TCPHandler,
-                                    False)
+        address = (self._config.props['address'], self._config.props['port'])
+        ThreadingTCPServer.__init__(self, address, _TCPHandler, False)
 
         self.server_thread = Thread(target=self.serve_forever)
         self.consumer_thread = Thread(target=self.mb_receive_loop)
-
-    def server_bind(self) -> None:
-        """Called to bind the socket. Overriden from ThreadingTCPServer class
-
-        Added feature: Incrementally search for an open port.
-        """
-
-        if self.allow_reuse_address:
-            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-        self._log.info('Attempting to bind socket to %s port %d',
-                       *self.server_address)
-
-        self.socket.bind(self.server_address)
+        self.bind_tries = TCPServerBeak.MAX_BIND_TRIES
 
     def _boot_beak(self) -> None:
         if b'\\' in self._config.props['line_ending'].encode('utf8', 'ignore'):
@@ -65,30 +53,11 @@ class TCPServerBeak(Beak, ThreadingTCPServer):  # type: ignore
         # when requests are registered that the boot process can wait on
 
         self._log.info('Booting server')
+        self._log.info('Attempting to bind socket to %s port %d',
+                       *self.server_address)
 
-        tries = TCPServerBeak.MAX_BIND_TRIES
-        while True:
-            try:
-                self.server_bind()
+        self.bind_with_incrementing_port()
 
-                # Very rarely bind will succeed but socket listen will still
-                # get errno.EADDRINUSE.
-                self.server_activate()
-                break
-            except socket.error as ex:
-                # Keep trying ports until we run out of tries
-                if ex.errno == errno.EADDRINUSE and tries >= 1:
-                    self._log.warning(
-                        'Socket failed to bind port %d. Trying next port',
-                        self.server_address[1])
-                    self.server_address = (
-                        self.server_address[0], self.server_address[1] + 1)
-                    tries -= 1
-                else:
-                    self._log.critical('Failed to bind to any socket')
-                    raise
-
-        self.server_address = self.socket.getsockname()
         self._log.info('Socket bound to %s: %d', *self.server_address)
 
     def _run_beak(self) -> None:
@@ -108,6 +77,32 @@ class TCPServerBeak(Beak, ThreadingTCPServer):  # type: ignore
         self.server_thread.join()
 
         self._log.info('Server shutdown')
+
+    def bind_with_incrementing_port(self) -> None:
+        while True:
+            try:
+                self.server_bind()
+
+                # Rarely, even when server bind succeeds, calling server
+                # activate fails with errno.EADDRINUSE.
+                self.server_activate()
+                break
+            except socket.error as ex:
+                # Keep trying ports until we run out of tries
+                if ex.errno == errno.EADDRINUSE and self.bind_tries >= 1:
+                    addr, port = self.server_address
+                    self._log.warning('Failed to bind port %d', port)
+                    self.server_address = (addr, port + 1)
+                    self.reset()
+                    self.bind_tries -= 1
+                else:
+                    self._log.critical('Failed to bind to any port')
+                    raise
+
+    def reset(self) -> None:
+        self.socket.close()
+        self.socket = socket.socket(self.address_family,
+                                    self.socket_type)
 
     def mb_receive_loop(self) -> None:
         while not self._stop_event.is_set():
