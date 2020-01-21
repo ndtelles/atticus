@@ -1,8 +1,11 @@
 """Configuration for pytest"""
 
+from queue import Queue
+
 import pytest
 
 from atticus import config
+from atticus.beak_manager import create_beak
 
 
 def pytest_runtest_makereport(item, call):
@@ -31,3 +34,14 @@ def simple_config_file():
 @pytest.fixture
 def simple_config(simple_config_file):
     return config.parse_file(simple_config_file)
+
+
+@pytest.fixture
+def beak_factory():
+    def _make_beak(config):
+        tx_q = Queue()
+        rx_q = Queue()
+        rr_q = Queue()
+        bk = create_beak(config, tx_q, rx_q, rr_q)
+        return bk, rx_q, tx_q, rr_q
+    return _make_beak

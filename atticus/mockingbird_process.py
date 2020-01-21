@@ -1,16 +1,14 @@
 """Provides multiprocessing control for atticus"""
 
 from enum import Enum
-from multiprocessing import Process, Value
-from typing import Dict
+from multiprocessing import Event, Process
 
-from .mock import mock
+from .config import Config
+from .mock import mock_main
 
 
 class MockingbirdProcess:
-    """Class for controlling the child mockingbird processes created by atticus"""
-
-    JOIN_TIMEOUT = 5
+    """Class for controlling mockingbird processes created by atticus"""
 
     class Status(Enum):
         """Enum class representing the status of the mockingbird process."""
@@ -18,20 +16,19 @@ class MockingbirdProcess:
         STOPPED = 0
         RUNNING = 1
 
-    def __init__(self, config: Dict, mb_name: str) -> None:
+    def __init__(self, config: Config, mb_name: str) -> None:
         """ The constructor of the Mockingbird Process class """
         self._status = MockingbirdProcess.Status.STOPPED
         self._config = config
         self._mb_name = mb_name
-        self._stop_event = Value('i', 0)
-        self._process = self._create_process()
+        self._stop_event = Event()
+        self._process = Process()
 
     def __del__(self) -> None:
-        if self._process.is_alive():
-            self.stop()
+        self.stop()
 
     def _create_process(self) -> Process:
-        return Process(target=mock, args=(
+        return Process(target=mock_main, args=(
             self._stop_event, self._config, self._mb_name))
 
     @property
@@ -43,7 +40,10 @@ class MockingbirdProcess:
     def start(self) -> None:
         """ Start the process """
 
-        self._stop_event.value = 0
+        if self._status is MockingbirdProcess.Status.RUNNING:
+            return
+
+        self._stop_event.clear()
         self._status = MockingbirdProcess.Status.RUNNING
         self._process = self._create_process()
         self._process.start()
@@ -51,8 +51,10 @@ class MockingbirdProcess:
     def stop(self) -> None:
         """ Stop the process """
 
-        self._stop_event.value = 1
-        self._process.join(MockingbirdProcess.JOIN_TIMEOUT)
+        if self._status is MockingbirdProcess.Status.STOPPED:
+            return
 
-        if not self._process.is_alive():
-            self._status = MockingbirdProcess.Status.STOPPED
+        self._stop_event.set()
+        self._process.join()
+
+        self._status = MockingbirdProcess.Status.STOPPED

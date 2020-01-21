@@ -1,61 +1,51 @@
 """This module manages the mockingbird object and interfaces."""
 
 import logging
-from copy import deepcopy
-from multiprocessing import Value
-from typing import Dict
+import threading
+from multiprocessing import Process, Queue
+from typing import Optional
 
-from .errors import BufferMissingError
-from .interfaces.beak import Beak
-from .interfaces.tcp_server import TCPServer
+from .config import Config
+from .helpers import drain_queue
+from .logger import configure_log, logger_main
 from .mockingbird import Mockingbird
 
 
-def mock(stop: Value, config: Dict, mb_name: str) -> None:
-    """Start communication interface and initialize mockingbird request API."""
-
-    configure_log(mb_name)
+def mock_main(stop: threading.Event, config: Config, mb_name: str) -> None:
+    """Main function loop for Mockingbird process."""
 
     try:
-        logging.info('Booting mockingbird')
+        # Create the logging process
+        log_q = Queue()  # type: Queue[Optional[logging.LogRecord]]
+        log_process = Process(target=logger_main, args=(log_q, mb_name))
+        log_process.start()
 
-        mockingbird = Mockingbird(requests=deepcopy(
-            config['requests']), props=deepcopy(config['properties']))
+        # Configure the log of this process.
+        configure_log(log_q)
+        log = logging.getLogger(mb_name)
+        log.info('Booting mockingbird')
 
-        interface = TCPServer(deepcopy(config['interfaces'][0]))
+        mockingbird = Mockingbird(mb_name, log_q, config)
 
-        with interface:
-            while not stop.value:
-                # Increase CPU efficieny by waiting for input ready event.
-                # Timeout ensures stop.value gets checked.
-                Beak.input_ready.wait(0.1)
+        with mockingbird:
+            stop.wait()
 
-                msg, respond = Beak.read_buffer()
-
-                response = ''
-                if msg is not None:
-                    response = mockingbird.request(msg)
-
-                if respond is not None:
-                    try:
-                        respond(response)
-                    except BufferMissingError:
-                        logging.warning('Output buffer missing')
     except (KeyboardInterrupt, SystemExit):
         pass  # Prevent stack trace caused by keyboard interrupt
     finally:
-        logging.info('Mockingbird process ended')
-
-
-def configure_log(mb_name: str) -> None:
-    """Configure the logger to be used by this mockingbird process."""
-
-    root = logging.getLogger()
-    # Rotate log files with a max size of 5MB per file
-    handler = logging.handlers.RotatingFileHandler(mb_name + '.log',
-                                                   maxBytes=5242880, backupCount=5)
-    formatter = logging.Formatter(
-        '%(asctime)s - %(levelname)s - %(name)s - %(message)s')
-    handler.setFormatter(formatter)
-    root.addHandler(handler)
-    root.setLevel(logging.INFO)
+        try:
+            log.info('Mockingbird shut down')
+        except NameError:
+            pass  # Log wan't defined yet
+        try:  # Attempt to stop logging process when exiting
+            log_q.put(None)
+            log_process.join(5)
+        except NameError:
+            pass  # log_q or log_process weren't defined yet
+        try:
+            # The log queue can still have stuff in it if the log process was
+            # never started. Drain the queue to keep joining the process from
+            # blocking
+            drain_queue(log_q)
+        except NameError:
+            pass
