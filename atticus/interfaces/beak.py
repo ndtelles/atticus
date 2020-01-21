@@ -2,7 +2,6 @@
 
 import logging
 from abc import abstractmethod
-from contextlib import AbstractContextManager
 from threading import Event, Thread
 from types import TracebackType
 from typing import Any, Callable, Tuple, Type
@@ -11,7 +10,7 @@ from typing import Optional as Opt  # Shorten name
 from ..config import Config
 
 
-class Beak(AbstractContextManager):
+class Beak:
     """Abstract class for creating interfaces used by the mockingbird."""
 
     def __init__(self, config: Config.Interface,
