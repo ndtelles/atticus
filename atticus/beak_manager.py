@@ -98,6 +98,9 @@ def beak_main(stop: threading.Event, config: Config.Interface, log_q: Queue,
         with beak:
             stop.wait()
 
+    except (KeyboardInterrupt, SystemExit):
+        pass  # Prevent stack trace caused by keyboard interrupt
+    finally:
         # Drain queues so the parent process doesn't block while trying to
         # join this process
         drain_queue(rx_q)
@@ -105,9 +108,6 @@ def beak_main(stop: threading.Event, config: Config.Interface, log_q: Queue,
         # Let parent thread handle the joining of these queues
         tx_q.cancel_join_thread()
         rr_q.cancel_join_thread()
-
-    except (KeyboardInterrupt, SystemExit):
-        pass  # Prevent stack trace caused by keyboard interrupt
 
 
 def create_beak(config: Config.Interface, rx_q: Queue, tx_q: Queue, rr_q: Queue) -> Beak:
