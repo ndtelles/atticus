@@ -20,11 +20,11 @@ TCP_SCHEMA = sch.Schema({
     'port': sch.And(sch.Use(int), lambda n: 0 <= n <= 65535),
     sch.Optional('line_ending', default="\n"): str,
     sch.Optional('default_response', default=''): str,
-    sch.Optional('latency', default=0): sch.And(sch.Use(int), lambda n: 0 <= n),
+    # sch.Optional('latency', default=0): sch.And(sch.Use(int), lambda n: 0 <= n),
     'requests': [{
         'in': str,
         'out': str,
-        sch.Optional('delay', default=0): sch.And(sch.Use(int), lambda n: 0 <= n)
+        # sch.Optional('delay', default=0): sch.And(sch.Use(int), lambda n: 0 <= n)
     }]
 })
 

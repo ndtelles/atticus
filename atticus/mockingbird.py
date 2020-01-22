@@ -6,7 +6,7 @@ import random
 import re
 import time
 from collections import namedtuple
-from queue import Queue, PriorityQueue
+from queue import Queue
 from threading import RLock, Thread
 from types import TracebackType
 from typing import Any, Dict, List, Tuple, Type
@@ -47,7 +47,7 @@ def _transform_parse_syntax(string: str) -> Tuple[str, List[str]]:
 def _escape_curly_braces(string: str) -> str:
     """Escape curly braces by doubling the number of them."""
 
-    return BRACES_REGEX.sub(r'\0\0', string)
+    return BRACES_REGEX.sub(r'\g<0>\g<0>', string)
 
 
 def _parse_variables(string: str) -> List[str]:
@@ -120,7 +120,7 @@ class _Var:
             self._value = value
 
 
-class Mockingbird():
+class Mockingbird:
     """Class that holds the API for simulating the device."""
 
     def __init__(self, mb_name: str, log_q: Queue, config: Config) -> None:
@@ -144,8 +144,8 @@ class Mockingbird():
         self._default_responses = {}  # type: Dict[str, _Request]
 
         # Threadsafe queue for holding response events
-        self._response_queue = PriorityQueue(
-        )  # type: PriorityQueue[Tuple[float,str,Any,_Request]]
+        self._response_queue = Queue(
+        )  # type: Queue[Tuple[float,str,Any,_Request]]
 
         self._register_requests_thread = Thread(
             target=self._register_requests_loop)
@@ -190,7 +190,13 @@ class Mockingbird():
                 raise
 
     def _register_request(self, beak: str, raw_req: Opt[str], raw_resp: Opt[str]) -> None:
-        """Register a new set of request response pairs."""
+        """Register a new set of request response pairs.
+
+        A raw_req without a raw_resp represents a request that doesn't expect
+        a response.
+        A raw_resp without a raw_req represents a default response for any
+        input that doesn't match a Request.
+        """
 
         if raw_req and raw_resp is None:
             self._log.warning('Received invalid register request.')
@@ -258,9 +264,12 @@ class Mockingbird():
             else:
                 # Request didn't match any registered requests
                 self._log.info(
-                    'Request "%s" didn\'t match any registered requests.', req)
+                    'No match found for request "%s"', req)
 
                 matching_request = self._default_responses.get(beak, None)
+
+            if matching_request is None:
+                return
 
             # Set the values parsed from the request
             if val_map is not None:

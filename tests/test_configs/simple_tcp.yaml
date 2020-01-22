@@ -7,13 +7,30 @@ interfaces:
     requests:
       - in: 'units?'
         out: '$(unit)'
-        delay: 10
+        # delay: 10
       - in: 'units $(unit)'
         out: '$(unit)'
+      - in: 'set phasers to $(phasers_mode)'
+        out: 'OK'
+      - in: 'set coordinates $(x) $(y)'
+        out: '$(x) $(y)'
+      - in: 'get coordinates'
+        out: '$(x) $(y)'
+      - in: 'version'
+        out: '1.0.0'
 vars:
   unit:
     init: 0
-    type: uint
+    type: int
   unit2:
     init: torr
     type: str
+  phasers_mode:
+    init: stun
+    type: str
+  x:
+    init: 0
+    type: float
+  y:
+    init: 0
+    type: float
