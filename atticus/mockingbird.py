@@ -6,7 +6,7 @@ import random
 import re
 import time
 from collections import namedtuple
-from queue import Queue, PriorityQueue
+from queue import Queue
 from threading import RLock, Thread
 from types import TracebackType
 from typing import Any, Dict, List, Tuple, Type
@@ -144,8 +144,8 @@ class Mockingbird:
         self._default_responses = {}  # type: Dict[str, _Request]
 
         # Threadsafe queue for holding response events
-        self._response_queue = PriorityQueue(
-        )  # type: PriorityQueue[Tuple[float,str,Any,_Request]]
+        self._response_queue = Queue(
+        )  # type: Queue[Tuple[float,str,Any,_Request]]
 
         self._register_requests_thread = Thread(
             target=self._register_requests_loop)
