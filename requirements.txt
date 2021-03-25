@@ -1,4 +1,4 @@
 contextlib2==0.5.5
 parse==1.14.0
-PyYAML==5.3
+PyYAML==5.4
 schema==0.7.1
